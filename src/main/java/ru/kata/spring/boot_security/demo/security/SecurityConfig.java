@@ -1,5 +1,6 @@
 package ru.kata.spring.boot_security.demo.security;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -7,19 +8,32 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import ru.kata.spring.boot_security.demo.service.UserServiceImpl;
+
+import java.security.Principal;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final UserServiceImpl userServiceImpl;
-    private final LoginSuccessHandler successHandler;
+    private final LoginSuccessHandler loginSuccessHandler;
+    private final UserDetailsService userDetailsService;
 
-    public SecurityConfig(UserServiceImpl userServiceImpl, LoginSuccessHandler successHandler) {
+    public SecurityConfig(UserServiceImpl userServiceImpl, LoginSuccessHandler loginSuccessHandler
+            , @Qualifier("userServiceImpl") UserDetailsService userDetailsService) {
         this.userServiceImpl = userServiceImpl;
-        this.successHandler = successHandler;
+        this.loginSuccessHandler = loginSuccessHandler;
+        this.userDetailsService = userDetailsService;
+    }
+
+    @ModelAttribute("auth")
+    public UserDetails authUser(Principal principal) {
+        return userDetailsService.loadUserByUsername(principal.getName());
     }
 
     @Override
@@ -34,7 +48,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .formLogin()
                 .loginPage("/login")
-                .successHandler(successHandler)
+                .successHandler(loginSuccessHandler)
                 .permitAll()
                 .and()
                 .logout()
